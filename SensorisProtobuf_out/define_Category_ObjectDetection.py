@@ -49,7 +49,7 @@ def defineObjectDetectionCategory():
     # 6 - size vector
     # 7 - surface type
     # 8 - surface material type
-    
+
     localStaticObject.envelope.CopyFrom(define_EventEnvelope.defineEventEnvelope(config.getConfig_Int("HERE_MAPLET_CONE_BARREL", "construction_zone_marker_id_int")))
 
     if config.getConfig_Str("HERE_MAPLET_CONE_BARREL", "construction_zone_cone_type_enum") == "CONE":

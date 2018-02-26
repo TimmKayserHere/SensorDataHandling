@@ -46,6 +46,8 @@ def main():
     with open('generatedSENSORISmessage.bin', 'wb') as f:
         f.write(mySensorisMessage.SerializeToString())
 
+    print mySensorisMessage.version.major.value
+
     # display the size of the written file
     statinfo = os.stat('generatedSENSORISmessage.bin')
     print "Size of written SENSORIS protobuf message is " + str(statinfo.st_size) + " Bytes"
