@@ -78,7 +78,7 @@ protoc -I=./src/ --cpp_out=../SensorDataHandling/SensorisProtobuf_out_cpp/ ./src
 echo Done.
 
 echo Compile "road_attribution.proto"
-#protoc -I=./src/ --python_out=../SensorDataHandling/SensorisProtobuf_out_python/ ./src/sensoris/protobuf/categories/road_attribution.proto
+protoc -I=./src/ --python_out=../SensorDataHandling/SensorisProtobuf_out_python/ ./src/sensoris/protobuf/categories/road_attribution.proto
 #protoc --doc_out=../../../../doc/ --doc_opt=html,road_attribution.html -I=. --python_out=../../../../../SensorDataHandling/SensorisProtobuf_out_python/ ./road_attribution.proto
 echo Done.
 
