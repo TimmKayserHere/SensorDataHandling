@@ -14,39 +14,31 @@ from sensoris.protobuf.categories import localization_pb2
 import define_Version
 import define_Submitter
 import define_DataMessage
-import config
+import define_SENSORISMessageEnvelope
 
 def main():
 
-    # The SENSORIS-Message basically consists of 3 elements
-    # #1 version
-    # #2 submitter
+    # The SENSORIS-Message basically consists of 2 elements
+    # #1 Envelope
     # #3 data message
     #
-    # These three elements will be generated here
+    # These two elements will be generated here
     # Please go deeper into the python files to see, how these elements are internally generated
 
     # this is the SENSORIS message itself
     mySensorisMessage = data_pb2.DataMessages()
 
-    # Filling #1 (version)
-    mySensorisMessage.version.CopyFrom(define_Version.DefineSENSORISVersion(config.getConfig_Int("general", "major_version"),config.getConfig_Int("general", "minor_version"),config.getConfig_Int("general", "patch_version")))
-
-    # Filling #2 (submitter)
-    mySensorisMessage.submitter.extend([define_Submitter.DefineSENSORISSubmitter(config.getConfig_Str("submitter", "OEM_brand"), config.getConfig_Str("submitter", "OEM_vehicle_type"), config.getConfig_Str("submitter", "OEM_ecu_sw_version"), config.getConfig_Str("submitter", "OEM_ecu_hw_version"))])
-
-    # Filling #3 (data message)
-    # This is the MAJOR part of SENSORIS!
+    mySensorisMessage.envelope.CopyFrom(define_SENSORISMessageEnvelope.DefineSENSORISMessageEnvelope())
     mySensorisMessage.data_message.extend([define_DataMessage.DefineSENSORISDataMessage()])
 
+    # after the generation, I want the generated SENSORIS message to be displayed
     print mySensorisMessage.__unicode__()
-
 
     # writes the protobuf stream on a binary file on disk
     with open('generatedSENSORISmessage.bin', 'wb') as f:
         f.write(mySensorisMessage.SerializeToString())
 
-    print mySensorisMessage.version.major.value
+    #print mySensorisMessage.envelope.version
 
     # display the size of the written file
     statinfo = os.stat('generatedSENSORISmessage.bin')

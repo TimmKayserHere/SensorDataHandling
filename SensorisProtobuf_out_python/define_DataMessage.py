@@ -13,6 +13,7 @@ import define_Envelope
 import define_EventGroup
 import define_EventRelation
 import define_EventSource
+import config
 
 def DefineSENSORISDataMessage():
 
@@ -29,10 +30,15 @@ def DefineSENSORISDataMessage():
 
     # putting the local data message together
     # see, that the envelope is a non-repeated value, whereas the others are repeated messages
-    # QUESTION: IS THAT REALLY THE SENSORIS ENVELOPE REQUESTED HERE OR THE EVENT ENVELOPE?
     localDataMessage.envelope.CopyFrom(define_Envelope.defineSENSORISEnvelope())
-    localDataMessage.event_group.extend([define_EventGroup.defineSENSORISEventGroup()])
-    localDataMessage.event_relation.extend([define_EventRelation.defineSENSORISEventRelation()])
-    localDataMessage.event_source.extend([define_EventSource.defineSENSORISEventSource()])
+
+    iterator = int(0)
+    while iterator < config.getConfig_Int("run_config", "numOfHEREMaplets"):
+        localDataMessage.event_group.extend([define_EventGroup.defineSENSORISEventGroup()])
+        iterator += 1
+
+    
+    #localDataMessage.event_relation.extend([define_EventRelation.defineSENSORISEventRelation()])
+    #localDataMessage.event_source.extend([define_EventSource.defineSENSORISEventSource()])
 
     return localDataMessage

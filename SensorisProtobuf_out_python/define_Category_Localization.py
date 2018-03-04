@@ -4,9 +4,11 @@ import time
 import math
 import numpy as np
 import nvector as nv
+import random
 
 import define_DataMessage as defDataMessage
 import define_EventGroup as defEventGroup
+import config
 
 # first of all, we import some basic compiled protobufs
 from sensoris.protobuf.types import base_pb2
@@ -29,182 +31,99 @@ from sensoris.protobuf.categories import weather_pb2
 
 def defineLocalizationCategory():
 
-    # the localization category consists of mainly 3 items
-    # #1 (vehicle position and orientation)
-    # #2 (vehicle odometry)
-    # #3 (vehicle dynamics)
-    # all elements are defined as "repeated", that means, you can link multiple of them together   
+    # the localization category consists of mainly 4 items
+    # #1 (envelope)
+    # #2 (vehicle position and orientation)
+    # #3 (vehicle odometry)
+    # #4 (vehicle dynamics)
+    # 3 elements are defined as "repeated", that means, you can link multiple of them together   
     localLocalizationCategory = localization_pb2.LocalizationCategory()
 
-    # hand over the information from sub-functions
-    localLocalizationCategory.vehicle_position_and_orientation.extend([defineVehiclePositionAndOrientation()])
-    localLocalizationCategory.vehicle_odometry.extend([defineVehicleOdometry()])
-    localLocalizationCategory.vehicle_dynamics.extend([defineVehicleDynamics()])
+    # here we define the mandatory event envelope for the localization
+    # There is a little bug in the Sensoris spec, as no content is defined in the category envelope
+    # but we define it, to comply
+    localizationCategoryEnvelope = base_pb2.CategoryEnvelope()
+    localLocalizationCategory.envelope.CopyFrom(localizationCategoryEnvelope)
+
+    ##########################################
+    # Here is the place to put in all the pose points we want to have in our HERE Maplet
+    # for the example, we assume to collect 5 different pose points
+    # these 5 pose points define the pose path
+    # all information that are not directly given in the pose point definition are "overarching" and will be given in the
+    # origin-evelop of the HERE Maplet (e.g. the drift of the vehicle throughout the whole maplet)
+
+    # As I do not want to manually code 5 localisations, I will use some random generators for the attributes
+    # But I will simply copy paste the next lines. Each line makes a pose point
+    # each of these pose points will come with an event envelope that contains a time stamp
+    # if you want to relate them to each other (or even the later generated fields, you can easily relate them by the timestamp)
+    numOfPosePointsInMessage = config.getConfig_Int("run_config", "numOfPosePoints_perHEREMaplet")
+
+    iterator = int(0)
+    while iterator < numOfPosePointsInMessage:
+        localLocalizationCategory.vehicle_position_and_orientation.extend([defineVehiclePositionAndOrientation()])
+        iterator += 1
 
     return localLocalizationCategory
 
+def defineTimestamp():
+    localTimestamp = base_pb2.Timestamp()
+    getMilliseconds = int(round(time.time() * 1000))
+    localTimestamp.posix_time.value = getMilliseconds
+    return localTimestamp
+
 def defineVehiclePositionAndOrientation():
-    
+
     localVehiclePositionAndOrientation = localization_pb2.VehiclePositionAndOrientation()
+    # In this section, we basically generate a HERE Maplet Pose Point
+    # per definition, the pose point should contain the following information
+    # (1) timestamp: given via the event envelope
+    # (2) pose point itself: given in ecef coordinates
+    # (3) orientation information: meaning yaw, pitch, roll without any accuracy information
 
-    localEnvelope = base_pb2.EventEnvelope()
-    localPosition = spatial_pb2.Position()
-    localOrientation = spatial_pb2.Rotation()
-    localNavigationSatelliteSystem = localization_pb2.VehiclePositionAndOrientation.NavigationSatelliteSystem()
+    # Keep in mind, the standard definition of SENSORIS could attach even more. But we will not utilize the standard
+    # to fit our needs.
 
-    # ENVELOPE
-    localEnvelope.id.value = 123
-    localEnvelope.timestamp.CopyFrom(defEventGroup.defineTimestamp())
+    # DEFNINITION of (1) EVENT ENVELOPE
+    localEventEnvelope = base_pb2.EventEnvelope()
+    localEventEnvelope.id.value = random.randrange(1,255)
+    localEventEnvelope.timestamp.CopyFrom(defineTimestamp())
+    localVehiclePositionAndOrientation.envelope.CopyFrom(localEventEnvelope)
 
-    # POSITION
-    localPosition.CopyFrom(defEventGroup.definePosition("metric", "cov"))
+    # DEFNINITION of (2) POSITION
+    localPosition = spatial_pb2.PositionAndAccuracy()
 
-    # ORIENTATION
-    localOrientation.CopyFrom(defEventGroup.defineRotation("euler", "cov"))
+    # "faking" ECEF values in a precise and meaningful way is a bit more tricky. Here is the approach:
+    # First, we take the ECEF xyz-values for the HERE Berlin office to have a meaningful first step
+    # x = 4973.941km, y = 2757.1km, z=-2878.261km
+    # but ecef values should be provided in meters, but with an accuracy for 1 cm
+    # for that reason, we convert the native km-values to cm precision
+    # wherever I have not enough precision provided in the above Berlin example, i add some tailing "9"
+    # x = 497394199 cm, y = 275710099 cm, z = -287826199 cm
+    # now we check, in which range these values might change
+    # x is in +/- 8000 m variance, basically, going from 4970km to + 4980km
+    # y is in +/- 8000 m variance, basically, going from 4970km to + 4980km
+    # y is in +/- 8000 m variance, basically, going from 4970km to + 4980km
+    # so, we basically generate a random int generator, working as follow
+ 
+    localPosition.metric.x.value = random.randrange(49700000,49800000)
+    localPosition.metric.y.value = random.randrange(49700000,49800000)
+    localPosition.metric.z.value = random.randrange(-49800000,-49700000)
 
-    # SATELLITE SYSTEM
-    localNavigationSatelliteSystem = localization_pb2.VehiclePositionAndOrientation.NavigationSatelliteSystem()
-
-    # SATELLITE SYSTEM -- Satellites by System
-    localSatellitesBySystem = localization_pb2.VehiclePositionAndOrientation.NavigationSatelliteSystem.SatellitesBySystem()
-    localSatellitesBySystem.system = source_pb2.Sensor.NavigationSatelliteSystem.GPS # IMPROVE HERE
-    localSatellitesBySystem.total.value = 2 # IMPROVE HERE
-    localNavigationSatelliteSystem.satellites_by_system.extend([localSatellitesBySystem])   
-
-    # SATELLITE SYSTEM - fix_type - hvpt dop
-    localNavigationSatelliteSystem.fix_type = localization_pb2.VehiclePositionAndOrientation.NavigationSatelliteSystem.TWO_D_SATELLITE_BASED_AUGMENTATION
-    localNavigationSatelliteSystem.hdop.value = 123
-    localNavigationSatelliteSystem.vdop.value = 456
-    localNavigationSatelliteSystem.pdop.value = 789
-    localNavigationSatelliteSystem.tdop.value = 369
-
-    localVehiclePositionAndOrientation.envelope.CopyFrom(localEnvelope)
     localVehiclePositionAndOrientation.position.CopyFrom(localPosition)
+
+    # DEFNINITION of (3) 
+
+    localOrientation = spatial_pb2.RotationAndAccuracy()
+
+    # a roatation around the vehicle coordinate system usually turns in +180 degree or -180 degree in all directions
+    # we want to cover this with regards to the requested accuracy for 0.01 digits
+    # this means, we generate random values for -18000 to +18000 for all the angles
+    localOrientation.euler.yaw.value = random.randrange(-18000,18000)
+    localOrientation.euler.pitch.value = random.randrange(-18000,18000)
+    localOrientation.euler.roll.value = random.randrange(-18000,18000)
+
     localVehiclePositionAndOrientation.orientation.CopyFrom(localOrientation)
-    localVehiclePositionAndOrientation.navigation_satellite_system.CopyFrom(localNavigationSatelliteSystem)
 
     return localVehiclePositionAndOrientation
 
-def defineVehicleOdometry():
-    localVehicleOdometry = localization_pb2.VehicleOdometry()
-
-    localVehicleOdometry_Envelope = base_pb2.EventEnvelope()
-    localVehicleOdometry_Translation = spatial_pb2.Position()
-    localVehicleOdometry_Rotation = spatial_pb2.Rotation()
-
-    localVehicleOdometry_Envelope.id.value = 123
-    localVehicleOdometry_Envelope.timestamp.CopyFrom(defEventGroup.defineTimestamp())
-
-    localVehicleOdometry_Translation.CopyFrom(defEventGroup.definePosition("metric", "cov"))
-
-    localVehicleOdometry_Rotation.CopyFrom(defEventGroup.defineRotation("euler", "cov"))
-
-    localVehicleOdometry.envelope.CopyFrom(localVehicleOdometry_Envelope)
-    localVehicleOdometry.translation.CopyFrom(localVehicleOdometry_Translation)
-    localVehicleOdometry.rotation.CopyFrom(localVehicleOdometry_Rotation)
-
-    return localVehicleOdometry
-
-def defineVehicleDynamics():
-    localVehicleDynamics = localization_pb2.VehicleDynamics()
     
-    # taking care on the envelope
-    localVehicleDynamics_Envelope = base_pb2.EventEnvelope()
-    localVehicleDynamics_Envelope.id.value = 123
-    localVehicleDynamics_Envelope.timestamp.CopyFrom(defEventGroup.defineTimestamp())
-
-    localVehicleDynamics.envelope.CopyFrom(localVehicleDynamics_Envelope)
-    localVehicleDynamics.speed.CopyFrom(defineVehicleSpeed("xyz"))
-    localVehicleDynamics.acceleration.CopyFrom(defineVehicleAcceleration("xyz"))
-    localVehicleDynamics.rotation_rate.CopyFrom(defineVehicleRotationRate("cov"))
-
-    return localVehicleDynamics
-
-def defineVehicleSpeed(strAccuracy):
-    localSpeed = spatial_pb2.Speed()
-
-    localSpeed.x_m_p_s.value = 16666 # representing 16.666 m/s with scale factor = 3
-    localSpeed.y_m_p_s.value = 20
-    localSpeed.z_m_p_s.value = 30
-
-    if strAccuracy == "cxyz":
-        localSpeed.combined_x_y_z_accuracy.x_y_z_m_p_s.value = 2
-        pass
-    
-    if strAccuracy == "xyz":
-        localSpeed.x_y_z_accuracy.x_m_p_s.value = 2
-        localSpeed.x_y_z_accuracy.y_m_p_s.value = 2
-        localSpeed.x_y_z_accuracy.z_m_p_s.value = 2
-
-    if strAccuracy == "cov":
-        localSpeed.covariance_matrix.a11.value = 1
-        localSpeed.covariance_matrix.a12.value = 1
-        localSpeed.covariance_matrix.a13.value = 1
-        localSpeed.covariance_matrix.a21.value = 1
-        localSpeed.covariance_matrix.a22.value = 1
-        localSpeed.covariance_matrix.a23.value = 1
-        localSpeed.covariance_matrix.a31.value = 1
-        localSpeed.covariance_matrix.a32.value = 1
-        localSpeed.covariance_matrix.a33.value = 1
-
-    return localSpeed
-
-def defineVehicleAcceleration(strAccuracy):
-    localAcceleration = spatial_pb2.Acceleration()
-
-    localAcceleration.x_m_p_s2.value = 10
-    localAcceleration.y_m_p_s2.value = 20
-    localAcceleration.z_m_p_s2.value = 30
-
-    if strAccuracy == "cxyz":
-        localAcceleration.combined_x_y_z_accuracy.x_y_z_m_p_s2.value = 2
-        pass
-    
-    if strAccuracy == "xyz":
-        localAcceleration.x_y_z_accuracy.x_m_p_s2.value = 2
-        localAcceleration.x_y_z_accuracy.y_m_p_s2.value = 2
-        localAcceleration.x_y_z_accuracy.z_m_p_s2.value = 2
-
-    if strAccuracy == "cov":
-        localAcceleration.covariance_m2_p_s4.a11.value = 1
-        localAcceleration.covariance_m2_p_s4.a12.value = 1
-        localAcceleration.covariance_m2_p_s4.a13.value = 1
-        localAcceleration.covariance_m2_p_s4.a21.value = 1
-        localAcceleration.covariance_m2_p_s4.a22.value = 1
-        localAcceleration.covariance_m2_p_s4.a23.value = 1
-        localAcceleration.covariance_m2_p_s4.a31.value = 1
-        localAcceleration.covariance_m2_p_s4.a32.value = 1
-        localAcceleration.covariance_m2_p_s4.a33.value = 1
-
-    return localAcceleration
-
-def defineVehicleRotationRate(strAccuracy):
-    localVehicleDynamics_RotationRate = spatial_pb2.RotationRate()
-
-    localVehicleDynamics_RotationRate.yaw_deg_p_s.value = 20
-    localVehicleDynamics_RotationRate.pitch_deg_p_s.value = 40
-    localVehicleDynamics_RotationRate.roll_deg_p_s.value = 60
-
-    if strAccuracy == "cypr":
-        localVehicleDynamics_RotationRate.combined_yaw_pitch_roll_accuracy.yaw_pitch_roll_deg_p_s.value = 70
-        pass
-
-    if strAccuracy == "ypr":
-        localVehicleDynamics_RotationRate.yaw_deg_p_s.value = 80
-        localVehicleDynamics_RotationRate.pitch_deg_p_s.value = 90
-        localVehicleDynamics_RotationRate.roll_deg_p_s.value = 100
-        pass
-    
-    if strAccuracy == "cov":
-        localVehicleDynamics_RotationRate.covariance_matrix.covariance_deg2_p_s2.a11.value = 5
-        localVehicleDynamics_RotationRate.covariance_matrix.covariance_deg2_p_s2.a12.value = 10
-        localVehicleDynamics_RotationRate.covariance_matrix.covariance_deg2_p_s2.a13.value = 15
-        localVehicleDynamics_RotationRate.covariance_matrix.covariance_deg2_p_s2.a21.value = 20
-        localVehicleDynamics_RotationRate.covariance_matrix.covariance_deg2_p_s2.a22.value = 25
-        localVehicleDynamics_RotationRate.covariance_matrix.covariance_deg2_p_s2.a23.value = 30
-        localVehicleDynamics_RotationRate.covariance_matrix.covariance_deg2_p_s2.a31.value = 35
-        localVehicleDynamics_RotationRate.covariance_matrix.covariance_deg2_p_s2.a32.value = 40
-        localVehicleDynamics_RotationRate.covariance_matrix.covariance_deg2_p_s2.a33.value = 45
-        pass
-
-    return localVehicleDynamics_RotationRate
