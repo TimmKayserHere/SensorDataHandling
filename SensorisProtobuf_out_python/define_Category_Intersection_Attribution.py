@@ -47,6 +47,7 @@ def defineIntersectionAttribution():
   iterator = int(0)
   while iterator < NumOfTrafficSignalsInSensorisMessage:
       localTrafficSignal.traffic_light_status.extend([defineTrafficSignal()])
+      localTrafficSignal.traffic_light_cofiguration.extend([defineTrafficLightConfiguration()])
       iterator += 1
 
   return localTrafficSignal
@@ -86,27 +87,42 @@ def defineTrafficSignal():
   localTrafficSignal.position.covariance.a33.value = 3
 
   # 3D bounding box, relative to absolute position
-  localTrafficSignal.bounding_box.lowerLeftPoint.x.value = -10
-  localTrafficSignal.bounding_box.lowerLeftPoint.y.value = -10
-  localTrafficSignal.bounding_box.lowerLeftPoint.z.value = -10
-  localTrafficSignal.bounding_box.upperRightPoint.x.value = 20
-  localTrafficSignal.bounding_box.upperRightPoint.y.value = 20
-  localTrafficSignal.bounding_box.upperRightPoint.z.value = 20
+  # TODO: There is not explicit bounding box in the intersection attribution, that describes a traffic light.
+  # This will have do be done by the "Object Detection Proto"
+  #localTrafficSignal.bounding_box.lowerLeftPoint.x.value = -10
+  #localTrafficSignal.bounding_box.lowerLeftPoint.y.value = -10
+  #localTrafficSignal.bounding_box.lowerLeftPoint.z.value = -10
+  #localTrafficSignal.bounding_box.upperRightPoint.x.value = 20
+  #localTrafficSignal.bounding_box.upperRightPoint.y.value = 20
+  #localTrafficSignal.bounding_box.upperRightPoint.z.value = 20
 
   # indicating, that the traffic signal is working, currently GREEN, circular shaped in a vertical setup
   localTrafficSignal.status_and_confidence.status = intersection_attribution_pb2.TrafficLightStatus.StatusAndConfidence.ON
   localTrafficSignal.colour_and_confidence.colour = intersection_attribution_pb2.TrafficLightStatus.ColourAndConfidence.GREEN
   localTrafficSignal.shape_and_confidence.shape = intersection_attribution_pb2.TrafficLightStatus.ShapeAndConfidence.CIRCLE
-  localTrafficSignal.shape_and_confidence.orientation = intersection_attribution_pb2.TrafficLightStatus.ShapeAndConfidence.VERTICAL
 
   # (5)
-  localTrafficSignal.tier_count.traffic_signal_horizontal_count.value = 10
-  localTrafficSignal.tier_count.traffic_signal_vertical_count.value = 3
-  localTrafficSignal.tier_count.traffic_signal_horizontal_light_count.value = 5
-  localTrafficSignal.tier_count.traffic_signal_vertical_light_count.value = 2
+  # TODO: There is a new message inside the Intersection Attribution Category to cover this
+  #localTrafficSignal.traffic_light_cofiguration.count_of_traffic_lights.value = 3
 
   return localTrafficSignal
 
+def defineTrafficLightConfiguration():
+  localNumOfLightsPerTrafficLight = intersection_attribution_pb2.TrafficSignalConfiguration()
+
+  localEventEnvelope = base_pb2.EventEnvelope()
+  localEventEnvelope.id.value = random.randrange(1,255)
+  localEventEnvelope.timestamp.CopyFrom(defineTimestamp())
+  localNumOfLightsPerTrafficLight.envelope.CopyFrom(localEventEnvelope)
+
+  localNumOfLightsPerTrafficLight.count_of_traffic_lights.traffic_signal_horizontal_count.value = 3
+  localNumOfLightsPerTrafficLight.count_of_traffic_lights.traffic_signal_vertical_count.value = 2
+  localNumOfLightsPerTrafficLight.count_of_traffic_lights.traffic_signal_horizontal_light_count.value = 3
+  localNumOfLightsPerTrafficLight.count_of_traffic_lights.traffic_signal_vertical_light_count.value = 2
+
+  localNumOfLightsPerTrafficLight.orientation = intersection_attribution_pb2.TrafficSignalConfiguration.VERTICAL
+
+  return localNumOfLightsPerTrafficLight
 
 def defineTimestamp():
     localTimestamp = base_pb2.Timestamp()

@@ -97,7 +97,8 @@ def defineOrigin():
     localOrigin.absolute_spatial_reference_system.CopyFrom(defineAbsoluteSpatialReferenceSystem())
     localOrigin.position.CopyFrom(definePosition("metric", "COV"))
     localOrigin.orientation.CopyFrom(defineRotation("euler", "COV"))
-    localOrigin.drift.CopyFrom(defineDrift("COV"))
+    # TODO: Drift was decided out of SENSORIS spec, as it is part of multiple positions and could be derived
+    #localOrigin.drift.CopyFrom(defineDrift("COV"))
     
     return localOrigin
 
@@ -116,8 +117,9 @@ def defineAbsoluteSpatialReferenceSystem():
         localSpatialReferenceSystem.EpsgCodeSystem.WGS_84
         pass
     
-    localSpatialReferenceSystem.mask_angle.value = config.getConfig_Int("HERE_MAPLET_ORIGIN", "mask_angle_deg")
-    localSpatialReferenceSystem.snr.value = config.getConfig_Int("HERE_MAPLET_ORIGIN", "snr_dB")
+    # TODO: We need to define it at a specific other place to comply to SENSORIS
+    #localSpatialReferenceSystem.mask_angle.value = config.getConfig_Int("HERE_MAPLET_ORIGIN", "mask_angle_deg")
+    #localSpatialReferenceSystem.snr.value = config.getConfig_Int("HERE_MAPLET_ORIGIN", "snr_dB")
     localSpatialReferenceSystem.rinex_string.value = config.getConfig_Str("HERE_MAPLET_ORIGIN", "rinex_string")
 
     return localSpatialReferenceSystem

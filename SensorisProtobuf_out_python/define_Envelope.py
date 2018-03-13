@@ -30,7 +30,10 @@ def defineSENSORISEnvelope():
     localIdentifyer.vehicle_fleet_id.value = str(uuid.uuid4())
     localIdentifyer.vehicle_id.value = str(uuid.uuid4())
     localIdentifyer.driver_id.value = str(uuid.uuid4())
-    localIdentifyer.campaign_id.value = str(uuid.uuid4())
+    
+    localIdentifyer.job_request_id.append(str(uuid.uuid4()))
+    localIdentifyer.job_submitter_id.value = str(uuid.uuid4())
+
     localEnvelope.ids.CopyFrom(localIdentifyer)
 
     localVehicleDimensions = data_pb2.DataMessage.Envelope.VehicleDimensions()
@@ -51,14 +54,11 @@ def defineSENSORISEnvelope():
 
     # provinding some information on used map
     localMapIdentification = data_pb2.DataMessage.Envelope.MapIdentification()
-    localMapIdentification.map_source_name.value = config.getConfig_Str("map_identification", "map_source_name")
-    localMapIdentification.map_source_version.CopyFrom(define_Version.DefineMapVersion())
-    localMapIdentification.map_compiler_name.value = config.getConfig_Str("map_identification", "map_compiler_name")
-    localMapIdentification.map_compiler_version.CopyFrom(define_Version.DefineCompilerVersion())
+    localMapIdentification.map_source_identification.map_source_name.value = config.getConfig_Str("map_identification", "map_source_name")
+    localMapIdentification.map_source_identification.map_source_version.CopyFrom(define_Version.DefineMapVersion())
+    localMapIdentification.map_compiler_identification.map_compiler_name.value = config.getConfig_Str("map_identification", "map_compiler_name")
+    localMapIdentification.map_compiler_identification.map_compiler_version.CopyFrom(define_Version.DefineCompilerVersion())
     localMapIdentification.map_format = data_pb2.DataMessage.Envelope.MapIdentification.NDS
     localEnvelope.map_identification.CopyFrom(localMapIdentification)
-
-    # providing some information on the compression factor of the SENSORIS message
-    localEnvelope.compression_factor.value = 250
     
     return localEnvelope
